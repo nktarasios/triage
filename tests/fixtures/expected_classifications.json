@@ -1,0 +1,119 @@
+[
+  {
+    "event_id": "30270-11713",
+    "rule_severity": "critical",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Fatality alleged",
+      "Crash involved a vulnerable road user",
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "30270-15069",
+    "rule_severity": "high",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Crash involved a vulnerable road user"
+    ]
+  },
+  {
+    "event_id": "30270-15179",
+    "rule_severity": "high",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Crash involved a vulnerable road user"
+    ]
+  },
+  {
+    "event_id": "30270-15246",
+    "rule_severity": "high",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Injury required hospitalization",
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "30270-15174",
+    "rule_severity": "high",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Injury required hospitalization",
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "30270-15070",
+    "rule_severity": "high",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Injury required hospitalization",
+      "Air bag deployment reported",
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "31101-14813",
+    "rule_severity": "high",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "Air bag deployment reported",
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "30610-15465",
+    "rule_severity": "medium",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "30270-15356",
+    "rule_severity": "medium",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "A vehicle was towed from the scene"
+    ]
+  },
+  {
+    "event_id": "30270-15177",
+    "rule_severity": "medium",
+    "rule_reportable": false,
+    "matched_reasons": [
+      "Minor injury alleged, no hospitalization"
+    ]
+  },
+  {
+    "event_id": "30270-15029",
+    "rule_severity": "low",
+    "rule_reportable": false,
+    "matched_reasons": []
+  },
+  {
+    "event_id": "30270-14989",
+    "rule_severity": "low",
+    "rule_reportable": false,
+    "matched_reasons": []
+  },
+  {
+    "event_id": "30270-15249",
+    "rule_severity": "medium",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "A vehicle was towed from the scene",
+      "Pre-crash speed above 35 mph"
+    ]
+  },
+  {
+    "event_id": "30270-15157",
+    "rule_severity": "medium",
+    "rule_reportable": true,
+    "matched_reasons": [
+      "A vehicle was towed from the scene",
+      "Pre-crash speed above 35 mph"
+    ]
+  }
+]

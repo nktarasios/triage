@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<!--
+  Review workbench for the safety event triage agent.
+
+  Usage:
+    Reads the triaged-results JSON path from the `?data=` query parameter:
+
+        dashboard.html?data=output/triaged.json
+
+    NOTE: browsers block fetch() on file:// pages, so serve this folder over
+    HTTP instead of opening the file directly:
+
+        python -m http.server
+        # then open http://localhost:8000/dashboard.html?data=output/triaged.json
+
+  Reviewing & labeling:
+    Click a row to expand the full narrative, structured fields, and the
+    agent's reasoning. Record your own reportable/not-reportable judgment
+    plus notes per event; labels persist in this browser's localStorage and
+    export as JSON in exactly the schema eval/run_eval.py expects, save the
+    exported file as tests/eval/labeled_events.json.
+
+  Zero dependencies, zero build step, plain HTML/CSS/JS in one file.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safety Event Triage · Review</title>
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --border: #e4e3de;
+    --detail-bg: #f4f3f0;
+    --sev-critical: #d03b3b;
+    --sev-high: #ec835a;
+    --sev-medium: #fab219;
+    --sev-low: #0ca30c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --border: #33322f;
+      --detail-bg: #222220;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
+  h1 { font-size: 18px; font-weight: 650; margin: 0 0 2px; }
+  .source { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+  .source code { font-family: ui-monospace, Consolas, monospace; }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin-bottom: 10px;
+  }
+  .counts { color: var(--ink-2); font-size: 13px; margin-left: auto; }
+
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    border: 0; background: var(--surface); color: var(--ink-2);
+    padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+
+  input[type="search"] {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink);
+    padding: 6px 10px; font: inherit; font-size: 13px; min-width: 220px;
+  }
+  .btn {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink-2);
+    padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { color: var(--ink); }
+  .btn.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  .btn.danger-armed { border-color: var(--sev-critical); color: var(--sev-critical); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 14px; vertical-align: top; }
+  th {
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--ink); }
+  tbody tr.event { cursor: pointer; }
+  tbody tr.event:hover td { background: color-mix(in srgb, var(--detail-bg) 55%, transparent); }
+  tbody tr td { border-top: 1px solid var(--border); }
+  tbody tr:first-child td { border-top: 0; }
+
+  td.id { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; white-space: nowrap; }
+  .sev { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .sev .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .sev-critical .dot { background: var(--sev-critical); }
+  .sev-high     .dot { background: var(--sev-high); }
+  .sev-medium   .dot { background: var(--sev-medium); }
+  .sev-low      .dot { background: var(--sev-low); }
+
+  td.flag { white-space: nowrap; }
+  .flag-yes { font-weight: 600; }
+  .flag-no  { color: var(--muted); }
+
+  td.summary { color: var(--ink-2); max-width: 520px; }
+  .reasons { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+  td.review { white-space: nowrap; font-size: 13px; }
+  .lab-yes { font-weight: 600; }
+  .lab-no  { color: var(--muted); }
+  .lab-none { color: var(--muted); }
+  .disagree {
+    display: inline-block; margin-left: 6px; padding: 1px 7px;
+    border-radius: 99px; font-size: 11px; font-weight: 600;
+    color: var(--sev-critical); border: 1px solid var(--sev-critical);
+  }
+
+  tr.detail > td { background: var(--detail-bg); padding: 16px 18px 18px; }
+  .detail-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
+  @media (max-width: 800px) { .detail-grid { grid-template-columns: 1fr; } }
+  .panel h3 {
+    margin: 0 0 6px; font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .panel + .panel { margin-top: 16px; }
+  .narrative { white-space: pre-wrap; color: var(--ink-2); }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 13px; }
+  .kv dt { color: var(--muted); margin: 0; }
+  .kv dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+  .decision p { margin: 4px 0; color: var(--ink-2); font-size: 13px; }
+  .decision .who { color: var(--muted); }
+  .escalated {
+    display: inline-block; padding: 1px 7px; border-radius: 99px;
+    font-size: 11px; font-weight: 600; color: var(--sev-high);
+    border: 1px solid var(--sev-high); margin-left: 6px;
+  }
+  .label-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  textarea.notes {
+    width: 100%; min-height: 56px; resize: vertical;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink);
+    padding: 8px 10px; font: inherit; font-size: 13px;
+  }
+
+  .notice {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; color: var(--ink-2);
+  }
+  .notice code {
+    font-family: ui-monospace, Consolas, monospace; font-size: 12.5px;
+    background: var(--page); padding: 1px 5px; border-radius: 4px;
+  }
+  #sourcebar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #sourcebar label { font-size: 13px; }
+  #sourcebar select {
+    font: inherit; font-size: 13px; padding: 3px 6px;
+    border: 1px solid var(--border, #ccc); border-radius: 6px; background: var(--page, #fff);
+    max-width: 100%;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Safety Event Triage · Review</h1>
+  <div class="source" id="sourcebar">
+    <label for="dataset">Dataset:</label>
+    <select id="dataset"></select>
+    <span id="source"></span>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+"use strict";
+
+const SEV_RANK = { critical: 3, high: 2, medium: 1, low: 0 };
+const SEVERITIES = ["critical", "high", "medium", "low"];
+const LABEL_STORE_KEY = "triage-review-labels";
+
+const state = {
+  events: [],
+  filter: "all",        // reportable: all | yes | no
+  sevFilter: "all",     // all | critical | high | medium | low
+  search: "",
+  sortDir: "desc",      // desc = most severe first
+  hideLabeled: false,
+  expanded: new Set(),  // event_ids with the detail panel open
+  clearArmed: false,    // two-click confirm for "clear labels"
+};
+
+function loadLabels() {
+  try { return JSON.parse(localStorage.getItem(LABEL_STORE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveLabels(labels) {
+  localStorage.setItem(LABEL_STORE_KEY, JSON.stringify(labels));
+}
+let labels = loadLabels();  // event_id -> {human_reportable: bool, notes: str}
+
+const app = document.getElementById("app");
+const sourceEl = document.getElementById("source");
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function showNotice(html) {
+  app.innerHTML = `<div class="notice">${html}</div>`;
+}
+
+function matchesSearch(e, q) {
+  if (!q) return true;
+  const hay = [
+    e.event_id, e.summary, e.narrative,
+    (e.rule_reasons || []).join(" "),
+    Object.values(e.fields || {}).join(" "),
+  ].join(" ").toLowerCase();
+  return hay.includes(q);
+}
+
+function visibleEvents() {
+  const q = state.search.trim().toLowerCase();
+  let rows = state.events.filter(e => matchesSearch(e, q));
+  if (state.filter === "yes") rows = rows.filter(e => e.reportable);
+  if (state.filter === "no")  rows = rows.filter(e => !e.reportable);
+  if (state.sevFilter !== "all") rows = rows.filter(e => e.rule_severity === state.sevFilter);
+  if (state.hideLabeled) rows = rows.filter(e => !(e.event_id in labels));
+  const dir = state.sortDir === "desc" ? -1 : 1;
+  return [...rows].sort(
+    (a, b) => dir * ((SEV_RANK[a.rule_severity] ?? -1) - (SEV_RANK[b.rule_severity] ?? -1))
+  );
+}
+
+function reviewCell(e) {
+  const label = labels[e.event_id];
+  if (!label) return '<span class="lab-none">·</span>';
+  const text = label.human_reportable
+    ? '<span class="lab-yes">✓ Reportable</span>'
+    : '<span class="lab-no">✗ Not reportable</span>';
+  const disagrees = label.human_reportable !== e.reportable;
+  return text + (disagrees ? '<span class="disagree">disagrees</span>' : "");
+}
+
+function detailPanel(e) {
+  const label = labels[e.event_id] || {};
+  const hasLabel = e.event_id in labels;
+  const fields = Object.entries(e.fields || {});
+  const escalated = e.reportable && !e.rule_reportable;
+
+  return `
+    <div class="detail-grid">
+      <div>
+        <div class="panel">
+          <h3>Narrative</h3>
+          <div class="narrative">${
+            e.narrative ? esc(e.narrative)
+            : "<em>(narrative not present in this results file, regenerate it with the current pipeline to include it)</em>"
+          }</div>
+        </div>
+        <div class="panel">
+          <h3>Structured fields</h3>
+          <dl class="kv">
+            ${fields.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v) || "·"}</dd>`).join("")}
+          </dl>
+        </div>
+      </div>
+      <div>
+        <div class="panel decision">
+          <h3>Agent decision</h3>
+          <p><span class="who">Rules:</span> ${esc(e.rule_severity)}, ${
+            e.rule_reportable ? "reportable" : "not reportable"}${
+            (e.rule_reasons || []).length ? " · " + esc(e.rule_reasons.join(" · ")) : ""}</p>
+          <p><span class="who">LLM summary:</span> ${esc(e.summary)}</p>
+          <p><span class="who">LLM reasoning:</span> ${esc(e.llm_reasoning)}</p>
+          <p><span class="who">Final:</span> ${
+            e.reportable ? '<span class="flag-yes">✓ Reportable</span>' : '<span class="flag-no">,  Not reportable</span>'}${
+            escalated ? '<span class="escalated">LLM escalated</span>' : ""}</p>
+        </div>
+        <div class="panel">
+          <h3>Your review</h3>
+          <div class="label-controls">
+            <button class="btn ${label.human_reportable === true ? "primary" : ""}"
+                    data-label-yes="${esc(e.event_id)}">Reportable</button>
+            <button class="btn ${label.human_reportable === false ? "primary" : ""}"
+                    data-label-no="${esc(e.event_id)}">Not reportable</button>
+            ${hasLabel ? `<button class="btn" data-label-clear="${esc(e.event_id)}">Remove label</button>` : ""}
+          </div>
+          <textarea class="notes" placeholder="Notes (exported with the label)…"
+                    data-notes="${esc(e.event_id)}">${esc(label.notes || "")}</textarea>
+        </div>
+      </div>
+    </div>`;
+}
+
+function render() {
+  // Re-rendering replaces the DOM; keep the reviewer's place on the page.
+  const scrollY = window.scrollY;
+  const rows = visibleEvents();
+  const total = state.events.length;
+  const reportable = state.events.filter(e => e.reportable).length;
+  const labeledCount = Object.keys(labels).length;
+  const arrow = state.sortDir === "desc" ? "↓" : "↑";
+
+  const seg = (group, value, label) =>
+    `<button aria-pressed="${state[group] === value}" data-seg="${group}:${value}">${label}</button>`;
+
+  app.innerHTML = `
+    <div class="toolbar">
+      <div class="seg">
+        ${seg("filter", "all", "All")}${seg("filter", "yes", "Reportable")}${seg("filter", "no", "Not reportable")}
+      </div>
+      <div class="seg">
+        ${seg("sevFilter", "all", "Any severity")}${SEVERITIES.map(s => seg("sevFilter", s, s)).join("")}
+      </div>
+      <input type="search" id="search" placeholder="Search narrative, summary, fields…"
+             value="${esc(state.search)}">
+      <div class="counts">${rows.length} shown · ${total} total · ${reportable} reportable</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="hide-labeled" aria-pressed="${state.hideLabeled}">
+        ${state.hideLabeled ? "Show labeled" : "Hide labeled"}</button>
+      <button class="btn" id="export">Export labels (${labeledCount})</button>
+      <button class="btn" id="import">Import labels…</button>
+      <input type="file" id="import-file" accept=".json,application/json" hidden>
+      ${labeledCount ? `<button class="btn ${state.clearArmed ? "danger-armed" : ""}" id="clear">
+        ${state.clearArmed ? "Click again to clear all labels" : "Clear labels"}</button>` : ""}
+      <div class="counts">${labeledCount} labeled · export → <code>tests/eval/labeled_events.json</code></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Event ID</th>
+            <th class="sortable" id="sev-header" title="Click to sort">Severity ${arrow}</th>
+            <th>Reportable</th>
+            <th>Summary</th>
+            <th>Your label</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(e => `
+            <tr class="event" data-toggle="${esc(e.event_id)}">
+              <td class="id">${esc(e.event_id)}</td>
+              <td><span class="sev sev-${esc(e.rule_severity)}"><span class="dot"></span>${esc(e.rule_severity)}</span></td>
+              <td class="flag">${e.reportable
+                ? '<span class="flag-yes">✓ Yes</span>'
+                : '<span class="flag-no">,  No</span>'}</td>
+              <td class="summary">${esc(e.summary)}
+                ${(e.rule_reasons || []).length
+                  ? `<div class="reasons">Rules: ${esc(e.rule_reasons.join(" · "))}</div>` : ""}
+              </td>
+              <td class="review">${reviewCell(e)}</td>
+            </tr>
+            ${state.expanded.has(e.event_id)
+              ? `<tr class="detail"><td colspan="5">${detailPanel(e)}</td></tr>` : ""}
+          `).join("")}
+        </tbody>
+      </table>
+    </div>`;
+
+  wireEvents();
+  window.scrollTo(0, scrollY);
+}
+
+function setLabel(eventId, human_reportable) {
+  const existing = labels[eventId] || { notes: "" };
+  labels[eventId] = { ...existing, human_reportable };
+  saveLabels(labels);
+}
+
+function exportLabels() {
+  const out = Object.entries(labels)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([event_id, l]) => ({
+      event_id,
+      human_reportable: !!l.human_reportable,
+      notes: l.notes || "",
+    }));
+  const blob = new Blob([JSON.stringify(out, null, 2) + "\n"], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "labeled_events.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importLabels(file) {
+  file.text().then(text => {
+    const imported = JSON.parse(text);
+    if (!Array.isArray(imported)) throw new Error("expected a JSON array");
+    for (const l of imported) {
+      if (!l.event_id || typeof l.human_reportable !== "boolean") continue;
+      labels[l.event_id] = { human_reportable: l.human_reportable, notes: l.notes || "" };
+    }
+    saveLabels(labels);
+    render();
+  }).catch(err => {
+    showNotice(`Could not import labels: ${esc(err.message)}`);
+  });
+}
+
+function wireEvents() {
+  app.querySelectorAll("[data-seg]").forEach(btn =>
+    btn.addEventListener("click", () => {
+      const [group, value] = btn.dataset.seg.split(":");
+      state[group] = value;
+      render();
+    }));
+
+  const search = document.getElementById("search");
+  search.addEventListener("input", () => {
+    state.search = search.value;
+    render();
+    const el = document.getElementById("search");
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  });
+
+  document.getElementById("sev-header").addEventListener("click", () => {
+    state.sortDir = state.sortDir === "desc" ? "asc" : "desc";
+    render();
+  });
+
+  document.getElementById("hide-labeled").addEventListener("click", () => {
+    state.hideLabeled = !state.hideLabeled;
+    render();
+  });
+
+  document.getElementById("export").addEventListener("click", exportLabels);
+  document.getElementById("import").addEventListener("click", () =>
+    document.getElementById("import-file").click());
+  document.getElementById("import-file").addEventListener("change", ev => {
+    if (ev.target.files[0]) importLabels(ev.target.files[0]);
+  });
+
+  const clearBtn = document.getElementById("clear");
+  if (clearBtn) clearBtn.addEventListener("click", () => {
+    if (!state.clearArmed) { state.clearArmed = true; render(); return; }
+    labels = {};
+    saveLabels(labels);
+    state.clearArmed = false;
+    render();
+  });
+
+  app.querySelectorAll("tr[data-toggle]").forEach(tr =>
+    tr.addEventListener("click", ev => {
+      if (ev.target.closest("button, a, textarea, input")) return;
+      const id = tr.dataset.toggle;
+      state.expanded.has(id) ? state.expanded.delete(id) : state.expanded.add(id);
+      state.clearArmed = false;
+      render();
+    }));
+
+  app.querySelectorAll("[data-label-yes]").forEach(btn =>
+    btn.addEventListener("click", () => { setLabel(btn.dataset.labelYes, true); render(); }));
+  app.querySelectorAll("[data-label-no]").forEach(btn =>
+    btn.addEventListener("click", () => { setLabel(btn.dataset.labelNo, false); render(); }));
+  app.querySelectorAll("[data-label-clear]").forEach(btn =>
+    btn.addEventListener("click", () => {
+      delete labels[btn.dataset.labelClear];
+      saveLabels(labels);
+      render();
+    }));
+
+  // Notes save on change (blur) so typing doesn't trigger re-renders.
+  app.querySelectorAll("textarea[data-notes]").forEach(ta =>
+    ta.addEventListener("change", () => {
+      const id = ta.dataset.notes;
+      const existing = labels[id];
+      if (existing) {
+        existing.notes = ta.value;
+      } else if (ta.value.trim()) {
+        // Notes without a judgment yet, keep them, default to not reportable
+        // until the reviewer picks a side.
+        labels[id] = { human_reportable: false, notes: ta.value };
+      }
+      saveLabels(labels);
+      render();
+    }));
+}
+
+const DATASETS = [
+  { path: "docs/demo/sample_triaged.json", label: "NHTSA ADS crash reports (demo sample)" },
+  { path: "output/triaged.json", label: "Local run (output/triaged.json)" },
+];
+const DEFAULT_DATA = DATASETS[0].path;
+
+function buildDatasetPicker(activePath) {
+  const sel = document.getElementById("dataset");
+  sel.innerHTML = "";
+  let matched = false;
+  for (const d of DATASETS) {
+    const opt = document.createElement("option");
+    opt.value = d.path;
+    opt.textContent = d.label;
+    if (d.path === activePath) { opt.selected = true; matched = true; }
+    sel.appendChild(opt);
+  }
+  if (!matched) {
+    const opt = document.createElement("option");
+    opt.value = activePath;
+    opt.textContent = `Custom: ${activePath}`;
+    opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener("change", () => {
+    const url = new URL(location.href);
+    url.searchParams.set("data", sel.value);
+    location.href = url.toString();
+  });
+}
+
+async function init() {
+  const dataPath =
+    new URLSearchParams(location.search).get("data") || DEFAULT_DATA;
+  buildDatasetPicker(dataPath);
+  sourceEl.innerHTML = `Data: <code>${esc(dataPath)}</code>`;
+
+  let events;
+  try {
+    const resp = await fetch(dataPath);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+    events = await resp.json();
+  } catch (err) {
+    showNotice(
+      `Could not load <code>${esc(dataPath)}</code>: ${esc(err.message)}.<br><br>` +
+      "If you opened this file directly (file://), serve the folder over HTTP " +
+      "instead: <code>python -m http.server</code>, then use " +
+      "<code>http://localhost:8000/dashboard.html?data=…</code>."
+    );
+    return;
+  }
+
+  if (!Array.isArray(events)) {
+    showNotice("Expected a JSON array of triaged events.");
+    return;
+  }
+  state.events = events;
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

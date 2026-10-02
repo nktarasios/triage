@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safety-event-triage-agent"
+version = "0.1.0"
+description = "Local, privacy-first triage of tabular safety-event data: deterministic rules engine plus a local LLM (Ollama) for summaries and escalation."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "nktarasios" }]
+keywords = ["safety", "triage", "llm", "ollama", "local-first", "incident-reports"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "PyYAML>=6.0",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.urls]
+Repository = "https://github.com/nktarasios/triage"
+
+[project.scripts]
+triage-agent = "main:main"
+
+[tool.setuptools]
+packages = ["triage"]
+py-modules = ["main"]

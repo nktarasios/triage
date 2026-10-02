@@ -1,0 +1,302 @@
+[
+  {
+    "event_id": "30270-14908",
+    "human_reportable": false,
+    "notes": "Passenger-door dooring incident while parked for pickup; no injury reported. Operational issue, not regulatory."
+  },
+  {
+    "event_id": "30270-14945",
+    "human_reportable": false,
+    "notes": "AV stopped/yielding, struck by heavy truck. Property damage only."
+  },
+  {
+    "event_id": "30270-14981",
+    "human_reportable": false,
+    "notes": "SUV approached AV slowing for red light. Minor contact, no injury."
+  },
+  {
+    "event_id": "30270-14982",
+    "human_reportable": false,
+    "notes": "AV stopped in queue, struck from behind. Property damage only."
+  },
+  {
+    "event_id": "30270-14984",
+    "human_reportable": false,
+    "notes": "Low-speed contact in right-turn lane queue. Property damage only."
+  },
+  {
+    "event_id": "30270-14987",
+    "human_reportable": false,
+    "notes": "SUV reversed into parked AV while unparking. Clear third-party fault, minor."
+  },
+  {
+    "event_id": "30270-14988",
+    "human_reportable": false,
+    "notes": "Heavy truck contact while AV stopped at red light. Property damage only."
+  },
+  {
+    "event_id": "30270-14989",
+    "human_reportable": false,
+    "notes": "AV stopped at 0 mph, struck by SUV. Property damage only."
+  },
+  {
+    "event_id": "30270-14992",
+    "human_reportable": false,
+    "notes": "SUV contact while AV yielded to pedestrian at turn. Minor, no injury."
+  },
+  {
+    "event_id": "30270-15002",
+    "human_reportable": true,
+    "notes": "AV struck a domestic animal at 28 mph. Only visible in narrative \u2014 rules see no injury/tow. Perception-failure and welfare concern; escalate for review."
+  },
+  {
+    "event_id": "30270-15014",
+    "human_reportable": false,
+    "notes": "Low-speed queue contact at green light. Property damage only."
+  },
+  {
+    "event_id": "30270-15015",
+    "human_reportable": true,
+    "notes": "Crash partner airbag deployed \u2014 severity signal regardless of fault."
+  },
+  {
+    "event_id": "30270-15029",
+    "human_reportable": false,
+    "notes": "Contact with construction a-frame sign at 2 mph. Minor fixed-object contact, no injury."
+  },
+  {
+    "event_id": "30270-15030",
+    "human_reportable": false,
+    "notes": "AV stopped at 0 mph, struck by SUV. Property damage only."
+  },
+  {
+    "event_id": "30270-15069",
+    "human_reportable": true,
+    "notes": "Collision with cyclist on e-bike \u2014 vulnerable road user. Reportable even with no injury alleged."
+  },
+  {
+    "event_id": "30270-15097",
+    "human_reportable": false,
+    "notes": "Rear contact in slow queue. Property damage only."
+  },
+  {
+    "event_id": "30270-15098",
+    "human_reportable": false,
+    "notes": "Queue contact after light change. Property damage only."
+  },
+  {
+    "event_id": "30270-15106",
+    "human_reportable": false,
+    "notes": "Contact during unprotected left setup. Property damage only."
+  },
+  {
+    "event_id": "30270-15176",
+    "human_reportable": false,
+    "notes": "Van turned across AV's lane, AV at ~32 mph. No injury/tow reported, but moderate-speed impact \u2014 worth a damage review; not regulatory."
+  },
+  {
+    "event_id": "30270-15177",
+    "human_reportable": true,
+    "notes": "Minor injury alleged (no hospitalization). Rules leave un-flagged, but any alleged injury should get a reporting review. Deliberate disagreement with rules engine."
+  },
+  {
+    "event_id": "30270-15178",
+    "human_reportable": false,
+    "notes": "Pickup contact while AV stopped at stop sign. Property damage only."
+  },
+  {
+    "event_id": "30270-15179",
+    "human_reportable": true,
+    "notes": "Collision with motorcycle \u2014 vulnerable road user."
+  },
+  {
+    "event_id": "30270-15190",
+    "human_reportable": false,
+    "notes": "Contact while AV yielded in narrow street. Property damage only."
+  },
+  {
+    "event_id": "30270-15191",
+    "human_reportable": false,
+    "notes": "SUV reversed into parked AV. Third-party fault, minor."
+  },
+  {
+    "event_id": "30270-15195",
+    "human_reportable": false,
+    "notes": "Merging passenger car contact at ~23 mph. Property damage only."
+  },
+  {
+    "event_id": "30270-15238",
+    "human_reportable": false,
+    "notes": "AV parked for pickup, struck by passenger car. Property damage only."
+  },
+  {
+    "event_id": "30270-15253",
+    "human_reportable": false,
+    "notes": "Contact while AV yielded to cross traffic at stop sign. Minor."
+  },
+  {
+    "event_id": "30270-15255",
+    "human_reportable": false,
+    "notes": "Intersection contact at low speed. Property damage only."
+  },
+  {
+    "event_id": "30270-15256",
+    "human_reportable": false,
+    "notes": "Van contact in queue after light change. Property damage only."
+  },
+  {
+    "event_id": "30270-15257",
+    "human_reportable": false,
+    "notes": "Wind-blown shade structure struck adjacent car, AV involved secondarily. Freak external event, no injury."
+  },
+  {
+    "event_id": "30270-15259",
+    "human_reportable": false,
+    "notes": "Queue contact crossing intersection. Property damage only."
+  },
+  {
+    "event_id": "30270-15260",
+    "human_reportable": false,
+    "notes": "AV parked with hazards, struck by passing car. Property damage only."
+  },
+  {
+    "event_id": "30270-15261",
+    "human_reportable": false,
+    "notes": "AV stopped at red, struck. Property damage only."
+  },
+  {
+    "event_id": "30270-15262",
+    "human_reportable": false,
+    "notes": "Stopped at red behind car that reversed into AV. Minor, third-party fault."
+  },
+  {
+    "event_id": "30270-15263",
+    "human_reportable": false,
+    "notes": "SUV rear-ended AV yielding to animal in road. Property damage only."
+  },
+  {
+    "event_id": "30270-15285",
+    "human_reportable": false,
+    "notes": "SUV reversed along curb into stopped AV. Minor."
+  },
+  {
+    "event_id": "30270-15287",
+    "human_reportable": false,
+    "notes": "Lane-change contact with heavy truck at 0 mph. Property damage only."
+  },
+  {
+    "event_id": "30270-15289",
+    "human_reportable": true,
+    "notes": "Crash partner airbag deployed. Severity signal \u2014 reportable."
+  },
+  {
+    "event_id": "30270-15290",
+    "human_reportable": false,
+    "notes": "Spare tire from motorhome struck AV at ~26 mph. Damage but no injury, airbag, or tow \u2014 below every severity threshold. Fault-free debris strike; triage should filter this out."
+  },
+  {
+    "event_id": "30270-15291",
+    "human_reportable": false,
+    "notes": "Contact while AV yielded to garbage truck on narrow street. Minor."
+  },
+  {
+    "event_id": "30270-15292",
+    "human_reportable": false,
+    "notes": "Parked van contact at 1 mph near stop sign. Minor."
+  },
+  {
+    "event_id": "30270-15298",
+    "human_reportable": false,
+    "notes": "Bus contact during left turn while AV yielded. Property damage only."
+  },
+  {
+    "event_id": "30270-15299",
+    "human_reportable": false,
+    "notes": "Heavy truck reversed into stopped AV. Third-party fault, minor."
+  },
+  {
+    "event_id": "30270-15300",
+    "human_reportable": false,
+    "notes": "Contact while AV stopped for red after partial lane shift. Minor."
+  },
+  {
+    "event_id": "30270-15302",
+    "human_reportable": false,
+    "notes": "Heavy truck reversed into stopped AV on interstate. Property damage only."
+  },
+  {
+    "event_id": "30270-15307",
+    "human_reportable": false,
+    "notes": "Parking-lot exit contact while yielding. Minor."
+  },
+  {
+    "event_id": "30270-15352",
+    "human_reportable": true,
+    "notes": "Subject vehicle towed from scene \u2014 significant damage."
+  },
+  {
+    "event_id": "30270-15353",
+    "human_reportable": true,
+    "notes": "Both vehicles towed \u2014 significant collision."
+  },
+  {
+    "event_id": "30270-15356",
+    "human_reportable": true,
+    "notes": "Opposing SUV crossed into turn lane, AV at ~32 mph, subject vehicle towed."
+  },
+  {
+    "event_id": "30270-15358",
+    "human_reportable": true,
+    "notes": "Left-turn collision with pickup, subject vehicle towed."
+  },
+  {
+    "event_id": "30270-15360",
+    "human_reportable": true,
+    "notes": "Crash partner towed \u2014 significant damage even though AV was parked."
+  },
+  {
+    "event_id": "30270-15392",
+    "human_reportable": true,
+    "notes": "Van sideswiped parked AV, vehicle towed."
+  },
+  {
+    "event_id": "30413-15463",
+    "human_reportable": false,
+    "notes": "Low-hanging utility cable struck AV at ~33 mph. Infrastructure hazard \u2014 city notification and route avoidance, not regulatory. Note: same cable as 30413-15464, repeat hazard."
+  },
+  {
+    "event_id": "30413-15464",
+    "human_reportable": false,
+    "notes": "Second strike by the same low-hanging cable. Operational escalation (avoid route), not regulatory."
+  },
+  {
+    "event_id": "30610-15465",
+    "human_reportable": true,
+    "notes": "Zoox left-turn collision after operator took over on a hand-gesture wave-through; vehicle towed. Tow plus disengagement context \u2014 clearly reportable."
+  },
+  {
+    "event_id": "31101-14898",
+    "human_reportable": false,
+    "notes": "Pickup turned out of lot into AV's path at ~21 mph. Property damage only, no tow."
+  },
+  {
+    "event_id": "31101-14974",
+    "human_reportable": false,
+    "notes": "Passenger car cut across lanes into AV at ~17 mph. Property damage only."
+  },
+  {
+    "event_id": "31101-15093",
+    "human_reportable": true,
+    "notes": "AV continued driving forward under a lowering railroad crossing gate and struck it with its roof. Zero damage, but the behavior (proceeding as a rail gate closes) is a safety-critical red flag a reviewer escalates regardless of outcome."
+  },
+  {
+    "event_id": "31101-15099",
+    "human_reportable": false,
+    "notes": "AV adjacent to a collision between two other cars; AV not struck. Not the AV's crash."
+  },
+  {
+    "event_id": "31101-15100",
+    "human_reportable": false,
+    "notes": "Evasive maneuver during simultaneous merge. Read full narrative to confirm contact details; no injury reported."
+  }
+]

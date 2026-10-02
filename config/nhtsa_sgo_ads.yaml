@@ -1,0 +1,90 @@
+# Schema mapping for NHTSA's Standing General Order (SGO) ADS crash CSVs.
+# https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting
+#
+# This is the ONLY file you need to change to point the agent at a
+# different dataset. Nothing in triage/*.py knows about NHTSA specifically.
+
+dataset_name: "NHTSA SGO - ADS Incident Reports"
+
+# Column in the source CSV that uniquely identifies a row.
+id_field: "Report ID"
+
+# Free-text field the LLM reads for context/summary drafting.
+narrative_field: "Narrative"
+
+# Canonical field -> source column name. Add/remove as needed; anything
+# listed here becomes available to both the rules engine and the LLM
+# prompt under its canonical name.
+fields:
+  timestamp: "Incident Date"
+  city: "City"
+  state: "State"
+  reporting_entity: "Reporting Entity"
+  automation_engaged: "Automation System Engaged?"
+  crash_with: "Crash With"
+  injury_severity: "Highest Injury Severity Alleged"
+  airbag_deployed: "Any Air Bags Deployed?"
+  vehicle_towed: "Was Any Vehicle Towed?"
+  precrash_speed_mph: "SV Precrash Speed (MPH)"
+
+# --- Rule-based classification thresholds ---------------------------------
+# Two rule types are supported:
+#   keyword_rules  -> substring match (case-insensitive) against a text field
+#   numeric_rules  -> numeric threshold against a field parsed as a float
+#
+# Each rule that matches contributes a severity level and a reason string.
+# The event's final rule_severity is the highest severity of any matched
+# rule ("critical" > "high" > "medium" > "low"). rule_reportable is true if
+# ANY matched rule sets reportable: true.
+
+rules:
+  keyword_rules:
+    - field: injury_severity
+      contains: ["Fatality"]
+      severity: critical
+      reportable: true
+      reason: "Fatality alleged"
+
+    - field: crash_with
+      contains: ["Non-Motorist", "Pedestrian", "Cyclist", "Motorcycle", "Scooter"]
+      severity: high
+      reportable: true
+      reason: "Crash involved a vulnerable road user"
+
+    - field: injury_severity
+      contains: ["Hospitalization"]
+      not_contains: ["W/O Hospitalization"]
+      severity: high
+      reportable: true
+      reason: "Injury required hospitalization"
+
+    - field: airbag_deployed
+      contains: ["Yes Subject Vehicle", "Yes Crash Partner"]
+      severity: high
+      reportable: true
+      reason: "Air bag deployment reported"
+
+    - field: vehicle_towed
+      contains: ["Yes Subject Vehicle", "Yes Crash Partner"]
+      severity: medium
+      reportable: true
+      reason: "A vehicle was towed from the scene"
+
+    - field: injury_severity
+      contains: ["Minor"]
+      not_contains: ["W/ Hospitalization"]
+      severity: medium
+      reportable: false
+      reason: "Minor injury alleged, no hospitalization"
+
+  numeric_rules:
+    - field: precrash_speed_mph
+      operator: ">"
+      threshold: 35
+      severity: medium
+      reportable: false
+      reason: "Pre-crash speed above 35 mph"
+
+  # Default when no rule matches (e.g. property damage only, no injuries).
+  default_severity: low
+  default_reportable: false

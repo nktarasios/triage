@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safety Event Triage Agent · Which event needs a human in the next 24 hours?</title>
+<meta name="description" content="A local, config-driven LLM agent that triages safety events for regulatory reporting. Deterministic rules floor plus LLM escalation, measured against hand-labeled ground truth. No data leaves your machine.">
+<meta property="og:title" content="Safety Event Triage Agent">
+<meta property="og:description" content="Zero false negatives end-to-end on hand-labeled NHTSA events. Fully local by constraint, not preference.">
+<style>
+  :root {
+    --ink: #0b0b0b;
+    --sec: #52514e;
+    --muted: #898781;
+    --bg: #f9f9f7;
+    --surface: #fcfcfb;
+    --wash: #f4f3f0;
+    --line: #e6e4e0;
+    --blue: #2a78d6;
+    --good: #006300;
+    --flag: #d03b3b;
+    --warn: #ec835a;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.7 var(--sans); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+
+  .site-nav {
+    max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 0;
+    display: flex; align-items: baseline; gap: 1.4rem; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 0.8rem;
+  }
+  .nav-brand { font-weight: 600; }
+  .nav-links { display: flex; gap: 1.3rem; flex-wrap: wrap; margin-left: auto; }
+  .nav-links a { text-decoration: none; color: var(--sec); }
+  .nav-links a:hover { color: var(--ink); }
+
+  main { max-width: 900px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+  .section { border-top: 1px solid var(--line); margin-top: 3.5rem; padding-top: 2.5rem; }
+  .eyebrow { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 1rem; }
+  h1, h2, h3 { font-weight: 400; letter-spacing: -0.01em; }
+  h1 { font-family: var(--serif); font-size: 2.4rem; line-height: 1.2; max-width: 22ch; }
+  h1 em { font-style: italic; }
+  h2 { font-family: var(--serif); font-size: 1.55rem; }
+  h3 { font-family: var(--sans); font-size: 1rem; font-weight: 600; }
+  .section-lede { margin-top: 0.9rem; color: var(--sec); max-width: 62ch; }
+  .section-lede strong, .body-copy strong { color: var(--ink); }
+  .body-copy { margin-top: 0.9rem; color: var(--sec); max-width: 62ch; }
+
+  .hero { padding-top: 4.5rem; }
+  .brand { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 1.1rem; }
+  .lede { margin-top: 1.3rem; color: var(--sec); font-size: 1.05rem; max-width: 58ch; }
+  .cta-row { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.8rem; }
+  .btn {
+    display: inline-block; text-decoration: none; border-radius: 8px;
+    font-size: 0.92rem; font-weight: 600; padding: 0.55rem 1.1rem;
+    border: 1px solid var(--line); cursor: pointer; font-family: var(--sans);
+    background: var(--surface); color: var(--ink);
+  }
+  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn.primary:hover { background: #2a2a28; }
+  .btn:hover { border-color: var(--muted); }
+
+  .stats { display: flex; gap: 2.5rem; flex-wrap: wrap; margin-top: 2.2rem; }
+  .stat .n { font-family: var(--serif); font-size: 1.7rem; }
+  .stat.zero .n { color: var(--good); }
+  .stat .k { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.05em; color: var(--muted); margin-top: 0.15rem; max-width: 210px; }
+
+  .plain-strip { margin-top: 3rem; background: var(--wash); border-radius: 10px; padding: 1.2rem 1.4rem; }
+  .plain-kicker { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.35rem; }
+  .plain-line { color: var(--sec); font-size: 0.98rem; max-width: 70ch; }
+  .plain-line strong { color: var(--ink); }
+
+  .steps { counter-reset: s; margin-top: 1.6rem; display: grid; gap: 1rem; }
+  .step {
+    display: flex; gap: 1.1rem; align-items: baseline;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+  }
+  .step::before { counter-increment: s; content: "0" counter(s); font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+  .step h3 { margin-bottom: 0.3rem; }
+  .step p { color: var(--sec); font-size: 0.92rem; max-width: 60ch; }
+  .step p strong { color: var(--ink); }
+
+  /* demo */
+  .demo-picks { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.6rem; }
+  .demo-pick {
+    font-family: var(--mono); font-size: 0.78rem; padding: 0.35rem 0.85rem;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+    color: var(--sec); cursor: pointer;
+  }
+  .demo-pick:hover { color: var(--ink); }
+  .demo-pick.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .demo-stage { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.4rem 1.5rem; margin-top: 1rem; }
+  .demo-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+  .demo-id { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); }
+  .demo-head h3 { max-width: 46ch; margin-top: 0.2rem; }
+  .demo-fields {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.5rem 1.4rem; margin-top: 1rem; font-size: 0.85rem;
+  }
+  .demo-fields div { color: var(--sec); }
+  .demo-fields span { display: block; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.05em; color: var(--muted); }
+  .demo-narrative {
+    margin-top: 1rem; padding: 0.9rem 1.1rem; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px;
+    font-size: 0.88rem; color: var(--sec); font-style: italic;
+  }
+  .demo-steps { display: grid; gap: 0.7rem; margin-top: 1.1rem; }
+  .demo-step {
+    border: 1px solid var(--line); border-left: 3px solid var(--line);
+    border-radius: 8px; padding: 0.75rem 1rem; background: var(--bg);
+  }
+  .demo-step .step-label { display: block; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.05em; color: var(--muted); }
+  .demo-step .step-body { margin-top: 0.3rem; font-size: 0.92rem; color: var(--sec); }
+  .demo-step.live { background: var(--surface); }
+  .demo-step.ok { border-left-color: var(--good); }
+  .demo-step.escalate { border-left-color: var(--warn); }
+  .demo-step.flagged { border-left-color: var(--flag); }
+  .demo-verdict {
+    margin-top: 1.1rem; padding: 0.85rem 1.1rem; border-radius: 8px;
+    background: var(--wash); font-size: 0.95rem;
+  }
+  .demo-verdict .tag {
+    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.05em;
+    padding: 0.15rem 0.6rem; border-radius: 999px; margin-right: 0.6rem;
+    border: 1px solid var(--line); color: var(--sec); white-space: nowrap;
+  }
+  .demo-verdict.rep { background: #fdf0ee; }
+  .demo-verdict.rep .tag.rp { border-color: var(--flag); color: var(--flag); }
+  .demo-verdict.clear .tag.rp { border-color: var(--good); color: var(--good); }
+  .demo-note { font-size: 0.82rem; color: var(--muted); margin-top: 0.9rem; max-width: 70ch; }
+
+  table { border-collapse: collapse; width: 100%; margin-top: 1.4rem; font-size: 0.92rem; }
+  th { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.05em; color: var(--muted); text-align: left; font-weight: 500; padding: 0.5rem 1rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+  td { padding: 0.6rem 1rem 0.6rem 0; border-bottom: 1px solid var(--line); color: var(--sec); }
+  td:first-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+  td.num { font-family: var(--mono); font-size: 0.85rem; white-space: nowrap; }
+  td .good { color: var(--good); font-weight: 700; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.1rem; margin-top: 1.4rem; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.15rem 1.3rem; }
+  .card h3 { font-size: 0.92rem; }
+  .card p { font-size: 0.9rem; color: var(--sec); margin-top: 0.45rem; }
+  .card p code { font-family: var(--mono); font-size: 0.8em; background: var(--wash); padding: 1px 5px; border-radius: 4px; }
+
+  .code-block {
+    margin-top: 1.2rem; background: #1a1a19; color: #e8e6e1; border-radius: 10px;
+    padding: 1rem 1.2rem; overflow-x: auto;
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.7;
+  }
+
+  .site-footer { border-top: 1px solid var(--line); margin-top: 4rem; }
+  .footer-inner {
+    max-width: 900px; margin: 0 auto; padding: 1.6rem 1.5rem 2.5rem;
+    display: flex; gap: 1.4rem; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+  }
+  .footer-inner strong { color: var(--ink); }
+  .footer-inner a { color: var(--muted); text-decoration: none; }
+  .footer-inner a:hover { color: var(--ink); }
+  @media (max-width: 560px) { h1 { font-size: 1.9rem; } }
+</style>
+</head>
+<body>
+  <header class="site-nav">
+    <div class="nav-brand">Triage Agent</div>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#problem">Problem</a>
+      <a href="#how">How it works</a>
+      <a href="#demo">Demo</a>
+      <a href="#proof">Proof</a>
+      <a href="dashboard.html">Workbench ↗</a>
+      <a href="https://github.com/nktarasios/triage">GitHub ↗</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-label="Safety Event Triage Agent">
+      <p class="brand">/ Local-first LLM agent · safety-event triage</p>
+      <h1>Which event needs a human <em>in the next 24 hours?</em></h1>
+      <p class="lede">A config-driven agent that reads any tabular safety-event feed, classifies severity with deterministic rules plus a tool-calling local LLM, and flags what likely needs regulatory reporting. No byte of data ever leaves your machine.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#demo">Run the demo</a>
+        <a class="btn" href="dashboard.html">Open the review workbench</a>
+      </div>
+      <div class="stats">
+        <div class="stat zero"><div class="n">0</div><div class="k">false negatives end-to-end on 60 hand-labeled events</div></div>
+        <div class="stat"><div class="n">95%</div><div class="k">rules-only agreement with human labels (57/60)</div></div>
+        <div class="stat"><div class="n">2</div><div class="k">domains (NHTSA, OSHA), one codebase, config only</div></div>
+        <div class="stat"><div class="n">100%</div><div class="k">local. Ollama on your machine, no API key</div></div>
+      </div>
+    </section>
+
+    <div class="plain-strip">
+      <p class="plain-kicker">In one sentence</p>
+      <p class="plain-line">Regulators give operators as little as <strong>24 hours</strong> to report a qualifying safety event, and deciding which of hundreds of incoming events qualifies still happens in spreadsheets. This agent does the first pass: <strong>rules set the floor, a local LLM reads the narrative</strong>, and a human reviews a short, explained queue.</p>
+    </div>
+
+    <section class="section" id="problem">
+      <p class="eyebrow">01 · Problem</p>
+      <h2>Hard clocks, soft tooling</h2>
+      <p class="section-lede">NHTSA's Standing General Order gives AV operators as little as <strong>one day</strong> to report a qualifying crash; OSHA gives employers <strong>24 hours</strong> for an in-patient hospitalization. Missing a report risks fines and consent orders; flagging everything buries reviewers until they rubber-stamp.</p>
+      <p class="body-copy">The failure mode that matters most is the <strong>false negative</strong>: a reportable event that never reaches a human. The design goal is a floor that never misses on structured signals, plus an escalation path for what only the narrative reveals.</p>
+    </section>
+
+    <section class="section" id="how">
+      <p class="eyebrow">02 · How it works</p>
+      <h2>A floor you can audit, an escalation you can read</h2>
+      <div class="steps">
+        <div class="step"><div><h3>Normalize via config</h3><p>A YAML file maps <strong>your</strong> dataset's columns onto a small canonical schema. New domain, new config, <strong>zero code changes</strong>. The repo ships NHTSA AV crash reports and OSHA severe-injury reports driving identical code.</p></div></div>
+        <div class="step"><div><h3>Deterministic rules set the floor</h3><p>Keyword and threshold rules on structured fields (injury severity, crash partner, pre-crash speed) produce a severity and a reportability call with <strong>stated reasons</strong>. Auditable, fast, and never silently wrong.</p></div></div>
+        <div class="step"><div><h3>A local LLM reads the narrative</h3><p>A tool-calling model via Ollama drafts a plain-language summary and can <strong>escalate over the floor</strong> when the free-text narrative reveals what structured fields miss. It can raise, never lower: escalation only adds to the review queue.</p></div></div>
+      </div>
+      <p class="body-copy"><strong>Why fully local:</strong> safety-event data is often sensitive (PII, confidential business information, regulatory exposure). Local-only inference is not a preference here, it is the constraint that shaped the architecture.</p>
+    </section>
+
+    <section class="section" id="demo">
+      <p class="eyebrow">03 · Mini demo</p>
+      <h2>Watch one event get triaged</h2>
+      <p class="section-lede">Four real events from NHTSA's public SGO crash data (pre-redacted at the source). Pick one, press run, and watch the floor and the escalation do their separate jobs.</p>
+
+      <div class="demo-picks" id="demo-picks"></div>
+      <article class="demo-stage" aria-label="Interactive triage demo">
+        <header class="demo-head">
+          <div>
+            <p class="demo-id" id="demo-id"></p>
+            <h3 id="demo-title">Choose an event to begin.</h3>
+          </div>
+          <button type="button" class="btn primary" id="demo-run">Run triage</button>
+        </header>
+        <div class="demo-fields" id="demo-fields"></div>
+        <div class="demo-narrative" id="demo-narrative"></div>
+        <div class="demo-steps">
+          <div class="demo-step" data-step="norm"><span class="step-label">1 · Normalize (YAML config)</span><p class="step-body">Waiting…</p></div>
+          <div class="demo-step" data-step="rules"><span class="step-label">2 · Rules floor</span><p class="step-body">Waiting…</p></div>
+          <div class="demo-step" data-step="llm"><span class="step-label">3 · Local LLM (qwen2.5:14b via Ollama)</span><p class="step-body">Waiting…</p></div>
+        </div>
+        <p class="demo-verdict" id="demo-verdict" hidden></p>
+      </article>
+      <p class="demo-note">This demo replays recorded pipeline output for four real events, exactly what the agent produced, no live model call in the browser. The <a href="dashboard.html">review workbench</a> has all 25 demo events with filtering, labeling, and rules-vs-LLM reasoning side by side.</p>
+    </section>
+
+    <section class="section" id="proof">
+      <p class="eyebrow">04 · Proof</p>
+      <h2>Measured against hand-labeled ground truth</h2>
+      <p class="section-lede">Sixty real NHTSA events were hand-labeled (LLM-drafted, then human-reviewed event by event, including deliberate disagreements with the rules engine). The eval harness scores the agent against those labels:</p>
+      <table>
+        <tr><th>Configuration</th><th>Agreement</th><th>False negatives</th><th>False positives</th></tr>
+        <tr><td>Rules only</td><td class="num">95% (57/60)</td><td class="num">3</td><td class="num">0</td></tr>
+        <tr><td>Rules + LLM escalation</td><td class="num">32% (19/60)</td><td class="num"><span class="good">0</span></td><td class="num">41</td></tr>
+      </table>
+      <p class="body-copy">The three events the rules missed are visible only in the narrative (an alleged minor injury, a dog struck at 28&nbsp;mph, an AV driving under a closing railroad gate) and <strong>the LLM escalation caught all three</strong>. The cost is 41 extra events in the review queue, a deliberate trade: in this product, a missed report costs more than a longer queue, and the numbers that prove the trade are published, not hidden.</p>
+    </section>
+
+    <section class="section" id="generality">
+      <p class="eyebrow">05 · Generality</p>
+      <h2>Nothing is hard-coded to NHTSA</h2>
+      <div class="cards">
+        <div class="card"><h3>config/nhtsa_sgo_ads.yaml</h3><p>NHTSA AV crash reports: keyword rules on injury and crash-partner fields, a numeric pre-crash-speed threshold.</p></div>
+        <div class="card"><h3>config/osha_severe_injury.yaml</h3><p>OSHA workplace severe-injury reports: numeric rules mirroring the statutory reporting triggers (amputation, hospitalization, loss of an eye).</p></div>
+        <div class="card"><h3>Your dataset</h3><p>Any CSV with structured fields plus a free-text narrative. Write a config, point the CLI at it, <code>57 tests</code> keep the core honest.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="run">
+      <p class="eyebrow">06 · Reproduce</p>
+      <h2>Runs on your machine, against real public data</h2>
+      <pre class="code-block"><code>ollama pull qwen2.5:14b
+pip install -e '.[dev]'
+python fetch_data.py            # real NHTSA SGO CSVs
+python main.py --config config/nhtsa_sgo_ads.yaml
+python eval/run_eval.py         # score against the 60 hand labels</code></pre>
+      <p class="body-copy">MIT licensed. Built AI-assisted under the staged process documented in <a href="https://github.com/nktarasios/AI-SDLC">AI-SDLC</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <strong>Safety Event Triage Agent</strong>
+      <span>Demo data: public NHTSA SGO filings, redacted at the source</span>
+      <span><a href="https://nabilkhoury.com/">Nabil Khoury</a> · <a href="https://nabilkhoury.com/projects/">Build log</a> · <a href="https://github.com/nktarasios/triage">GitHub</a></span>
+    </div>
+  </footer>
+
+<script>
+"use strict";
+const CASES = [
+  {
+    id: "30270-15069",
+    kind: "Rule flag: vulnerable road user",
+    title: "Cyclist on an e-bike contacts a Waymo AV slowing for a drop-off",
+    fields: { City: "San Francisco, CA", "Crash with": "Motorcycle (e-bike)", "Injury field": "Property damage, none reported", "Automation": "ADS engaged" },
+    narrative: "“The Waymo AV was traveling westbound and slowing with its right turn signal activated in preparation for a passenger dropoff. While the Waymo AV was slowing, a cyclist traveling on an electric bicycle made contact with its rear left side and fell…”",
+    norm: "Mapped 12 NHTSA columns onto the canonical event schema via config/nhtsa_sgo_ads.yaml.",
+    rules: { cls: "flagged", text: "Severity HIGH. Reportable. Reason: crash involved a vulnerable road user." },
+    llm: { cls: "ok", text: "Summary drafted. “The rules engine has flagged this event as reportable due to involvement with a vulnerable road user.” No escalation needed, the floor already caught it." },
+    verdict: { rep: true, sev: "high", how: "by rule", text: "Reportable. The deterministic floor caught it from structured fields alone, the cheapest, most auditable path." }
+  },
+  {
+    id: "30270-15177",
+    kind: "LLM escalation: injury in narrative",
+    title: "Passenger alleges minor injury after a low-speed SUV collision",
+    fields: { City: "Los Angeles, CA", "Crash with": "SUV", "Injury field": "Minor, no hospitalization", "Automation": "ADS engaged" },
+    narrative: "“The Waymo AV was stopped in a queue of traffic for a red light. After the light turned green and traffic ahead advanced, the Waymo AV proceeded forward… The passenger in the Waymo AV reported minor injuries, but no airbags deployed and neither vehicle required towing.”",
+    norm: "Mapped 12 NHTSA columns onto the canonical event schema via config/nhtsa_sgo_ads.yaml.",
+    rules: { cls: "ok", text: "Severity MEDIUM. Not reportable by rules: minor injury alleged, no hospitalization crosses no structured threshold." },
+    llm: { cls: "escalate", text: "ESCALATED over the floor. The narrative alleges a passenger injury in an ADS collision, exactly the signal structured fields under-weight. Raised to reportable for human review." },
+    verdict: { rep: true, sev: "medium", how: "LLM escalation", text: "Reportable, escalated. This is one of the three event types the rules alone missed in eval, and why the escalation layer exists." }
+  },
+  {
+    id: "30270-15029",
+    kind: "LLM escalation: narrative-only signal",
+    title: "AV strikes a construction a-frame sign on a narrow street at night",
+    fields: { City: "San Francisco, CA", "Crash with": "Other (see narrative)", "Injury field": "Property damage, none reported", "Automation": "ADS engaged" },
+    narrative: "“The Waymo AV was traveling northbound on a narrow portion of the street, with vehicles parked on both sides, when it approached construction a-frame signs marking utility work on the right…”",
+    norm: "Mapped 12 NHTSA columns onto the canonical event schema via config/nhtsa_sgo_ads.yaml.",
+    rules: { cls: "ok", text: "Severity LOW. Not reportable by rules: no injury, no qualifying crash partner in structured fields." },
+    llm: { cls: "escalate", text: "ESCALATED over the floor. “An ADS collision that resulted in property damage and narrowly avoided injury due to the nature of the obstacle, which is not fully captured by the structured fields.”" },
+    verdict: { rep: true, sev: "low", how: "LLM escalation", text: "Reportable, escalated. The structured fields say a-frame sign; the narrative says an ADS misjudged a construction zone. Only the narrative reader sees that." }
+  },
+  {
+    id: "30270-15098",
+    kind: "Cleared: routine rear-end",
+    title: "Stationary AV rear-ended at low speed at an Austin intersection",
+    fields: { City: "Austin, TX", "Crash with": "Passenger car", "Injury field": "Property damage, none reported", "Automation": "ADS engaged" },
+    narrative: "“The Waymo AV was stopped in the left lane in a queue of traffic for a red light. After the light turned green and traffic ahead advanced, the Waymo AV proceeded forward, then slowed, and the passenger car behind moved forward and hit its rear end…”",
+    norm: "Mapped 12 NHTSA columns onto the canonical event schema via config/nhtsa_sgo_ads.yaml.",
+    rules: { cls: "ok", text: "Severity LOW. Not reportable by rules: no injuries, no qualifying damage, other party struck the stationary AV." },
+    llm: { cls: "ok", text: "Summary drafted. “The rules engine has already determined this event as non-reportable due to no injuries or significant damage reported.” Agrees with the floor, no escalation." },
+    verdict: { rep: false, sev: "low", how: "cleared", text: "Not reportable. Both layers agree, so this one never costs a reviewer's attention. That is the other half of triage." }
+  }
+];
+
+const picks = document.getElementById("demo-picks");
+const idEl = document.getElementById("demo-id");
+const titleEl = document.getElementById("demo-title");
+const fieldsEl = document.getElementById("demo-fields");
+const narrEl = document.getElementById("demo-narrative");
+const verdictEl = document.getElementById("demo-verdict");
+let active = CASES[0];
+let timers = [];
+
+function resetSteps() {
+  timers.forEach(clearTimeout); timers = [];
+  document.querySelectorAll(".demo-step").forEach(el => {
+    el.classList.remove("live", "ok", "escalate", "flagged");
+    el.querySelector(".step-body").textContent = "Waiting…";
+  });
+  verdictEl.hidden = true;
+  verdictEl.classList.remove("rep", "clear");
+}
+
+function select(c) {
+  active = c;
+  resetSteps();
+  idEl.textContent = "NHTSA SGO report " + c.id;
+  titleEl.textContent = c.title;
+  fieldsEl.innerHTML = Object.entries(c.fields)
+    .map(([k, v]) => `<div><span>${k}</span>${v}</div>`).join("");
+  narrEl.textContent = c.narrative;
+  document.querySelectorAll(".demo-pick").forEach(b =>
+    b.classList.toggle("active", b.dataset.id === c.id));
+}
+
+picks.innerHTML = CASES.map(c =>
+  `<button type="button" class="demo-pick" data-id="${c.id}">${c.kind}</button>`).join("");
+picks.querySelectorAll(".demo-pick").forEach(b =>
+  b.addEventListener("click", () => select(CASES.find(x => x.id === b.dataset.id))));
+select(active);
+
+function fill(key, cls, text) {
+  const el = document.querySelector(`.demo-step[data-step="${key}"]`);
+  el.classList.add("live", cls);
+  el.querySelector(".step-body").textContent = text;
+}
+
+document.getElementById("demo-run").addEventListener("click", () => {
+  resetSteps();
+  const c = active;
+  timers.push(setTimeout(() => fill("norm", "ok", c.norm), 100));
+  timers.push(setTimeout(() => fill("rules", c.rules.cls, c.rules.text), 800));
+  timers.push(setTimeout(() => fill("llm", c.llm.cls, c.llm.text), 1600));
+  timers.push(setTimeout(() => {
+    verdictEl.hidden = false;
+    verdictEl.classList.add(c.verdict.rep ? "rep" : "clear");
+    verdictEl.innerHTML =
+      `<span class="tag rp">${c.verdict.rep ? "REPORTABLE" : "NOT REPORTABLE"}</span>` +
+      `<span class="tag">severity: ${c.verdict.sev}</span>` +
+      `<span class="tag">${c.verdict.how}</span> ${c.verdict.text}`;
+  }, 2400));
+});
+</script>
+</body>
+</html>

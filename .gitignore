@@ -1,0 +1,22 @@
+# Data (fetched fresh via fetch_data.py, not committed)
+data/*.csv
+
+# Output (generated, not committed)
+output/*.json
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
+
+# OS
+.DS_Store
+
+# Claude Code personal/local overrides (if you ever add one)
+CLAUDE.local.md
+.claude/

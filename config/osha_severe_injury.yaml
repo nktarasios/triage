@@ -1,0 +1,80 @@
+# Schema mapping for OSHA's Severe Injury Reports (SIR) dataset —
+# workplace injuries employers must report to federal OSHA (amputation,
+# in-patient hospitalization, or loss of an eye) since January 2015.
+#
+# Full public dataset (CSV in a zip, ~105k reports):
+#   https://www.osha.gov/severe-injury-reports
+#   -> "Download the full current SIR data set"
+#
+# This is the second example config, included to demonstrate that the
+# agent is dataset-agnostic: a completely different domain (workplace
+# safety vs. AV crashes), different columns, different thresholds —
+# and zero code changes. Compare with nhtsa_sgo_ads.yaml.
+
+dataset_name: "OSHA Severe Injury Reports"
+
+# Column in the source CSV that uniquely identifies a row.
+id_field: "ID"
+
+# Free-text field the LLM reads for context/summary drafting.
+narrative_field: "Final Narrative"
+
+# Canonical field -> source column name.
+fields:
+  event_date: "EventDate"
+  employer: "Employer"
+  city: "City"
+  state: "State"
+  industry_naics: "Primary NAICS"
+  hospitalized: "Hospitalized"
+  amputation: "Amputation"
+  loss_of_eye: "Loss of Eye"
+  injury_nature: "NatureTitle"
+  body_part: "Part of Body Title"
+  event_type: "EventTitle"
+
+# --- Rule-based classification thresholds ---------------------------------
+# The three numeric rules mirror OSHA's own statutory reporting triggers
+# (29 CFR 1904.39): amputation, loss of an eye, in-patient hospitalization.
+# The keyword rules surface serious-but-not-statutory injuries for review
+# without flagging them reportable.
+
+rules:
+  keyword_rules:
+    - field: injury_nature
+      contains: ["Fracture"]
+      severity: medium
+      reportable: false
+      reason: "Fracture reported"
+
+    - field: injury_nature
+      contains: ["burn"]
+      severity: medium
+      reportable: false
+      reason: "Burn injury reported"
+
+  numeric_rules:
+    - field: amputation
+      operator: ">="
+      threshold: 1
+      severity: critical
+      reportable: true
+      reason: "Amputation reported"
+
+    - field: loss_of_eye
+      operator: ">="
+      threshold: 1
+      severity: critical
+      reportable: true
+      reason: "Loss of an eye reported"
+
+    - field: hospitalized
+      operator: ">="
+      threshold: 1
+      severity: high
+      reportable: true
+      reason: "In-patient hospitalization reported"
+
+  # Default when no rule matches.
+  default_severity: low
+  default_reportable: false
