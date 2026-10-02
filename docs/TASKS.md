@@ -47,3 +47,12 @@ file up to date so progress is visible at a glance across sessions.
       link for GitHub Pages
 - [ ] Enable GitHub Pages (Settings → Pages → deploy from `main`, root)
       after first push, done on github.com, not in the repo
+
+## Phase A, Grow the labeled set (sampling only)
+- [x] `eval/sample_for_labeling.py` (140 more NHTSA events, fixed seed,
+      narrative-only cases over-represented, rules-only draft + one-line
+      rationale)
+- [x] `tests/eval/to_review.json` for the workbench (drafts, not labels)
+- [x] `tests/eval/holdout_60.json` frozen copy of the original 60
+- [ ] A human reviews every draft in `dashboard.html` (do not automate).
+      Export reviewed labels to `tests/eval/labeled_events.json`.

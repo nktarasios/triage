@@ -35,6 +35,12 @@ larger labeled set, with every change reproducible by one command.
 **Acceptance:** 200 labeled events, 60 of them frozen as the holdout, sampling script
 reproducible with a fixed seed.
 
+**Status:** sampling and pre-fill only. `eval/sample_for_labeling.py` (seed
+`20261002`) writes 140 rules-only drafts to `tests/eval/to_review.json` and
+freezes the original 60 in `tests/eval/holdout_60.json`. Those drafts are
+not labels. A person reviews every row before anything is added to
+`tests/eval/labeled_events.json`.
+
 ## Phase B: Judge what happened, not what could have
 
 **Why:** the counterfactual habit is the root cause of the false alarms.
